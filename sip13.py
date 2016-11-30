@@ -94,7 +94,7 @@ with Function("Sum64", (k0, k1, p_base, p_len, p_cap), uint64_t, target=uarch.de
     LABEL(labels[0])
 
     XOR(reg_v3, reg_b)
-    sipround(reg_v0, reg_v1, reg_v2, reg_v3)
+    for _ in range(0,cROUND): sipround(reg_v0, reg_v1, reg_v2, reg_v3)
     XOR(reg_v0, reg_b)
 
     XOR(reg_v2, 0xff)
