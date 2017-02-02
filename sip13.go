@@ -27,6 +27,10 @@ func (s *sip) round() {
 	s.v2 = rotl64(s.v2, 32)
 }
 
+func Sum64Str(k0, k1 uint64, p string) uint64 {
+	return Sum64(k0, k1, []byte(p))
+}
+
 func Sum64(k0, k1 uint64, p []byte) uint64 {
 
 	s := sip{

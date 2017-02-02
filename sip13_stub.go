@@ -6,3 +6,6 @@ package sip13
 //go:noescape
 
 func Sum64(k0, k1 uint64, p []byte) uint64
+
+//go:noescape
+func Sum64Str(k0, k1 uint64, p string) uint64

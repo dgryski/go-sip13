@@ -83,6 +83,12 @@ func TestSip13(t *testing.T) {
 		if got != want[i] {
 			t.Errorf("Sum64([%d])=%08x, want %08x\n", i, got, want[i])
 		}
+
+		got = Sum64Str(k0, k1, string(p[:i]))
+		if got != want[i] {
+			t.Errorf("Sum64Str([%d])=%08x, want %08x\n", i, got, want[i])
+		}
+
 	}
 
 }

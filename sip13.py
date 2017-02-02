@@ -10,6 +10,7 @@ p_cap = Argument(int64_t)
 cROUND = 1
 dROUND = 3
 
+
 def sipround(v0, v1, v2, v3):
     ADD(v0, v1)
     ADD(v2, v3)
@@ -29,79 +30,90 @@ def sipround(v0, v1, v2, v3):
 
     ROL(v2, 32)
 
-with Function("Sum64", (k0, k1, p_base, p_len, p_cap), uint64_t, target=uarch.default) as function:
 
-    reg_v0 = GeneralPurposeRegister64()
-    reg_v1 = GeneralPurposeRegister64()
-    reg_v2 = GeneralPurposeRegister64()
-    reg_v3 = GeneralPurposeRegister64()
+def makeSip(name, args):
 
-    LOAD.ARGUMENT(reg_v0, k0)
-    MOV(reg_v2, reg_v0)
-    LOAD.ARGUMENT(reg_v1, k1)
-    MOV(reg_v3, reg_v1)
+    with Function(name, args, uint64_t, target=uarch.default) as function:
 
-    reg_magic = GeneralPurposeRegister64()
-    MOV(reg_magic, 0x736f6d6570736575)
-    XOR(reg_v0, reg_magic)
-    MOV(reg_magic, 0x646f72616e646f6d)
-    XOR(reg_v1, reg_magic)
-    MOV(reg_magic, 0x6c7967656e657261)
-    XOR(reg_v2, reg_magic)
-    MOV(reg_magic, 0x7465646279746573)
-    XOR(reg_v3, reg_magic)
+        reg_v0 = GeneralPurposeRegister64()
+        reg_v1 = GeneralPurposeRegister64()
+        reg_v2 = GeneralPurposeRegister64()
+        reg_v3 = GeneralPurposeRegister64()
 
-    reg_p = GeneralPurposeRegister64()
-    reg_p_len = GeneralPurposeRegister64()
-    LOAD.ARGUMENT(reg_p, p_base)
-    LOAD.ARGUMENT(reg_p_len, p_len)
+        LOAD.ARGUMENT(reg_v0, k0)
+        MOV(reg_v2, reg_v0)
+        LOAD.ARGUMENT(reg_v1, k1)
+        MOV(reg_v3, reg_v1)
 
-    reg_b = GeneralPurposeRegister64()
-    MOV(reg_b, reg_p_len)
-    SHL(reg_b, 56)
+        reg_magic = GeneralPurposeRegister64()
+        MOV(reg_magic, 0x736f6d6570736575)
+        XOR(reg_v0, reg_magic)
+        MOV(reg_magic, 0x646f72616e646f6d)
+        XOR(reg_v1, reg_magic)
+        MOV(reg_magic, 0x6c7967656e657261)
+        XOR(reg_v2, reg_magic)
+        MOV(reg_magic, 0x7465646279746573)
+        XOR(reg_v3, reg_magic)
 
-    reg_m = GeneralPurposeRegister64()
+        reg_p = GeneralPurposeRegister64()
+        reg_p_len = GeneralPurposeRegister64()
+        LOAD.ARGUMENT(reg_p, p_base)
+        LOAD.ARGUMENT(reg_p_len, p_len)
 
-    loop = Loop()
-    CMP(reg_p_len, 8)
-    JL(loop.end)
-    with loop:
-        MOV(reg_m, [reg_p])
+        reg_b = GeneralPurposeRegister64()
+        MOV(reg_b, reg_p_len)
+        SHL(reg_b, 56)
 
-        XOR(reg_v3, reg_m)
-        for _ in range(0,cROUND): sipround(reg_v0, reg_v1, reg_v2, reg_v3)
-        XOR(reg_v0, reg_m)
+        reg_m = GeneralPurposeRegister64()
 
-        ADD(reg_p, 8)
-        SUB(reg_p_len, 8)
+        loop = Loop()
+
         CMP(reg_p_len, 8)
-        JGE(loop.begin)
+        JL(loop.end)
+        with loop:
+            MOV(reg_m, [reg_p])
 
-    # no support for jump tables
-    labels = [Label("sw%d" % i) for i in range(0, 8)]
+            XOR(reg_v3, reg_m)
+            for _ in range(0, cROUND):
+                sipround(reg_v0, reg_v1, reg_v2, reg_v3)
+            XOR(reg_v0, reg_m)
 
-    for i in range(0,7):
-        CMP(reg_p_len, i)
-        JE(labels[i])
+            ADD(reg_p, 8)
+            SUB(reg_p_len, 8)
+            CMP(reg_p_len, 8)
+            JGE(loop.begin)
 
-    char = GeneralPurposeRegister64()
-    for i in range(7,0,-1):
-        LABEL(labels[i])
-        MOVZX(char, byte[reg_p+i-1])
-        SHL(char, (i-1)*8)
-        OR(reg_b, char)
+        # no support for jump tables
+        labels = [Label("sw%d" % i) for i in range(0, 8)]
 
-    LABEL(labels[0])
+        for i in range(0, 7):
+            CMP(reg_p_len, i)
+            JE(labels[i])
 
-    XOR(reg_v3, reg_b)
-    for _ in range(0,cROUND): sipround(reg_v0, reg_v1, reg_v2, reg_v3)
-    XOR(reg_v0, reg_b)
+        char = GeneralPurposeRegister64()
+        for i in range(7, 0, -1):
+            LABEL(labels[i])
+            MOVZX(char, byte[reg_p + i - 1])
+            SHL(char, (i - 1) * 8)
+            OR(reg_b, char)
 
-    XOR(reg_v2, 0xff)
-    for _ in range(0,dROUND): sipround(reg_v0, reg_v1, reg_v2, reg_v3)
+        LABEL(labels[0])
 
-    XOR(reg_v0, reg_v1)
-    XOR(reg_v2, reg_v3)
-    XOR(reg_v0, reg_v2)
+        XOR(reg_v3, reg_b)
+        for _ in range(0, cROUND):
+            sipround(reg_v0, reg_v1, reg_v2, reg_v3)
+        XOR(reg_v0, reg_b)
 
-    RETURN(reg_v0)
+        XOR(reg_v2, 0xff)
+        for _ in range(0, dROUND):
+            sipround(reg_v0, reg_v1, reg_v2, reg_v3)
+
+        XOR(reg_v0, reg_v1)
+        XOR(reg_v2, reg_v3)
+        XOR(reg_v0, reg_v2)
+
+        RETURN(reg_v0)
+
+
+makeSip("Sum64", (k0, k1, p_base, p_len, p_cap))
+makeSip("Sum64Str", (k0, k1, p_base, p_len))
