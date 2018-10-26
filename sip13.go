@@ -2,29 +2,30 @@
 
 package sip13
 
+import (
+	"encoding/binary"
+	"math/bits"
+)
+
 type sip struct {
 	v0, v1, v2, v3 uint64
-}
-
-func rotl64(x uint64, r uint64) uint64 {
-	return (((x) << (r)) | ((x) >> (64 - r)))
 }
 
 func (s *sip) round() {
 	s.v0 += s.v1
 	s.v2 += s.v3
-	s.v1 = rotl64(s.v1, 13)
-	s.v3 = rotl64(s.v3, 16)
+	s.v1 = bits.RotateLeft64(s.v1, 13)
+	s.v3 = bits.RotateLeft64(s.v3, 16)
 	s.v1 ^= s.v0
 	s.v3 ^= s.v2
-	s.v0 = rotl64(s.v0, 32)
+	s.v0 = bits.RotateLeft64(s.v0, 32)
 	s.v2 += s.v1
 	s.v0 += s.v3
-	s.v1 = rotl64(s.v1, 17)
-	s.v3 = rotl64(s.v3, 21)
+	s.v1 = bits.RotateLeft64(s.v1, 17)
+	s.v3 = bits.RotateLeft64(s.v3, 21)
 	s.v1 ^= s.v2
 	s.v3 ^= s.v0
-	s.v2 = rotl64(s.v2, 32)
+	s.v2 = bits.RotateLeft64(s.v2, 32)
 }
 
 func Sum64Str(k0, k1 uint64, p string) uint64 {
@@ -42,7 +43,7 @@ func Sum64(k0, k1 uint64, p []byte) uint64 {
 	b := uint64(len(p)) << 56
 
 	for len(p) >= 8 {
-		m := uint64(p[0]) | uint64(p[1])<<8 | uint64(p[2])<<16 | uint64(p[3])<<24 | uint64(p[4])<<32 | uint64(p[5])<<40 | uint64(p[6])<<48 | uint64(p[7])<<56
+		m := binary.LittleEndian.Uint64(p[:8])
 		s.v3 ^= m
 		s.round()
 		s.v0 ^= m
