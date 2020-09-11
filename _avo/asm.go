@@ -6,6 +6,7 @@ import (
 	"strconv"
 
 	. "github.com/mmcloughlin/avo/build"
+	"github.com/mmcloughlin/avo/buildtags"
 	. "github.com/mmcloughlin/avo/operand"
 	. "github.com/mmcloughlin/avo/reg"
 )
@@ -39,6 +40,7 @@ func sipround(v0, v1, v2, v3 Register) {
 
 func main() {
 	Package("github.com/dgryski/go-sip13")
+	Constraint(buildtags.Not("noasm").ToConstraint())
 
 	makeSip("Sum64", "func(k0, k1 uint64, p []byte) uint64")
 	makeSip("Sum64Str", "func(k0, k1 uint64, p string) uint64")
