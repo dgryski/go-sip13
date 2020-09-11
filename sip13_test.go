@@ -69,6 +69,16 @@ var want = []uint64{
 	0x9d199062b7bbb3a8,
 }
 
+var direct = []struct {
+	h uint64
+	s string
+}{
+	{0xac20658cb45c5a1e, "Hello World"},
+	{0x25f46378bb4419d6, "Привет Всем!"},
+	{0x63edad07d05747c2, "^A\v\xbf)\x85\xb2I\xb4\xf8\xa6\x14"},
+	{0x7156a4faa386411d, "^A\v\xbf)\x85\xb2I\xb4\xf8\xa6\x00"},
+}
+
 func TestSip13(t *testing.T) {
 
 	var k0 uint64 = 0x0706050403020100
@@ -88,7 +98,52 @@ func TestSip13(t *testing.T) {
 		if got != want[i] {
 			t.Errorf("Sum64Str([%d])=%08x, want %08x\n", i, got, want[i])
 		}
-
 	}
 
+	for _, d := range direct {
+		got := Sum64Str(k0, k1, d.s)
+		if got != d.h {
+			t.Errorf("Sum64Str(%q)=%08x, want %08x\n", d.s, got, d.h)
+		}
+
+		got = Sum64(k0, k1, []byte(d.s))
+		if got != d.h {
+			t.Errorf("Sum64(%q)=%08x, want %08x\n", d.s, got, d.h)
+		}
+	}
+}
+
+var sum uint64
+
+func BenchmarkSip13(b *testing.B) {
+	var k0 uint64 = 0x0706050403020100
+	var k1 uint64 = 0x0f0e0d0c0b0a0908
+	var pb [64]byte
+	for i := 0; i < 64; i++ {
+		pb[i] = byte(i)
+	}
+
+	for k := 0; k < b.N; k++ {
+		for i := 0; i < 64; i++ {
+			sum += Sum64(k0, k1, pb[:i])
+		}
+	}
+	b.SetBytes(int64((64 + 65) / 2))
+}
+
+func BenchmarkSip13Str(b *testing.B) {
+	var k0 uint64 = 0x0706050403020100
+	var k1 uint64 = 0x0f0e0d0c0b0a0908
+	var pb [64]byte
+	for i := 0; i < 64; i++ {
+		pb[i] = byte(i)
+	}
+	p := string(pb[:])
+
+	for k := 0; k < b.N; k++ {
+		for i := 0; i < 64; i++ {
+			sum += Sum64Str(k0, k1, p[:i])
+		}
+	}
+	b.SetBytes(int64((64 + 65) / 2))
 }
